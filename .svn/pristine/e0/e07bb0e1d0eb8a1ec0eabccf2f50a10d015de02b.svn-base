@@ -1,0 +1,55 @@
+package com.skcc.rtspgw.controller;
+
+import com.skcc.rtspgw.service.TokenValidationService;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Controller;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+
+import javax.servlet.http.HttpServletResponse;
+import java.io.OutputStream;
+
+@Controller
+public class MJpegController {
+    private static Logger logger = LoggerFactory.getLogger(MJpegController.class);
+
+    @Autowired
+    private TokenValidationService tokenValidationService;
+
+
+    @GetMapping("jpeg")
+    public void mjpeg(@RequestParam("cameraId") String cameraId, @RequestParam("token") String token, HttpServletResponse response) throws Exception {
+        if(!tokenValidationService.validate(token)) {
+            throw new RuntimeException("invalid token");
+        }
+
+        response.setContentType("multipart/x-mixed-replace; boundary=--mjpeg");
+
+        // TODO implementation
+        int length = 100;
+        byte[] bytes = new byte[100];
+
+        OutputStream os = response.getOutputStream();
+
+        while(true) {
+            try {
+                os.write((
+                        "--mjpeg\r\n" +
+                                "Content-Type: image/jpeg\r\n" +
+                                "Content-Length: " + length + "\r\n" +
+                                "\r\n").getBytes());
+
+                os.write(bytes);
+                os.write("\r\n\r\n".getBytes());
+                os.flush();
+            }
+            catch(Exception e) {
+                logger.warn(e.getMessage(), e);
+                return;
+            }
+        }
+
+    }
+}

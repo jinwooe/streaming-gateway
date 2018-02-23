@@ -1,0 +1,55 @@
+package com.skcc.rtspgw.stream;
+
+import com.skcc.rtspgw.utils.CircularQueue;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.web.servlet.mvc.method.annotation.StreamingResponseBody;
+
+import java.io.IOException;
+import java.io.OutputStream;
+
+public class HttpHandlerContextImpl implements HttpHandlerContext, StreamingResponseBody {
+    private static Logger logger = LoggerFactory.getLogger(HttpHandlerContextImpl.class);
+
+    private final long cameraId;
+
+    private CircularQueue<byte[]> jpegQueue = new CircularQueue<>(50);
+
+    public HttpHandlerContextImpl(long cameraId) {
+        this.cameraId = cameraId;
+    }
+
+    @Override
+    public void write(byte[] bytes) {
+        jpegQueue.add(bytes);
+    }
+
+    @Override
+    public void writeTo(OutputStream os) throws IOException {
+        try {
+            while(true) {
+                byte[] bytes = jpegQueue.poll();
+                if(bytes != null) {
+                    os.write((
+                            "--mjpeg\r\n" +
+                                    "Content-Type: image/jpeg\r\n" +
+                                    "Content-Length: " + bytes.length + "\r\n" +
+                                    "\r\n").getBytes());
+
+                    os.write(bytes);
+                    os.write("\r\n\r\n".getBytes());
+                    os.flush();
+                }
+
+                Thread.sleep(5);
+            }
+        } catch (IOException e) {
+            logger.warn(e.getMessage(), e);
+            //TODO
+            // remove HttpHandlerContext object from StreamManager.httpHandlerContexts.remove(this)
+
+        } catch (InterruptedException e) {
+            logger.warn(e.getMessage(), e);
+        }
+    }
+}

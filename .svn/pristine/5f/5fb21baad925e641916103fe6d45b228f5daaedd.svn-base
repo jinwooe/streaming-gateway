@@ -1,0 +1,44 @@
+package com.skcc.rtspgw.rtsp;
+
+public class CSParserController {
+    private long cameraId;
+    private String rtspUrl;
+
+    public CSParserController(long cameraId, String rtspUrl) {
+        this.cameraId = cameraId;
+        this.rtspUrl = rtspUrl;
+    }
+
+    public interface OnDataCallback {
+        void onRgbData(long cameraId, byte[] buf, int bufSize, int width, int height);
+        void onJpegData(long cameraId, byte[] buf, int bufSize, int width, int height);
+    }
+
+    public void setDataCallback(OnDataCallback on) {
+
+    }
+
+    public void setEnableRgb(boolean b) {
+
+    }
+
+    public void setEnableJpeg(boolean b) {
+
+    }
+
+    public boolean isEnabledRgb() {
+        return false;
+    }
+
+    public boolean isEnabledJpeg() {
+        return true;
+    }
+
+    public void start() {
+
+    }
+
+    public void stop() {
+
+    }
+}

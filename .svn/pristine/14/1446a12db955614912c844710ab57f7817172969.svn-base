@@ -1,0 +1,96 @@
+package com.skcc.rtspgw.stream;
+
+import com.skcc.rtspgw.rtsp.CSParserController;
+import com.skcc.rtspgw.tcp.ResponseData;
+import io.netty.channel.ChannelHandlerContext;
+import org.apache.commons.collections4.queue.CircularFifoQueue;
+
+import java.util.List;
+import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+
+public class StreamManager implements CSParserController.OnDataCallback, Runnable {
+    private final long cameraId;
+    private final String rtspUrl;
+
+    private List<ChannelHandlerContext> tcpChannelHandlerContexts = new CopyOnWriteArrayList<>();
+
+    private CircularFifoQueue<byte[]> rgbQueue = new CircularFifoQueue<>(50);
+    private CircularFifoQueue<byte[]> jpegQueue = new CircularFifoQueue<>(50);
+
+    private final CSParserController csParserController;
+
+    ExecutorService executorService =  Executors.newFixedThreadPool(5);
+
+
+    public StreamManager(long cameraId, String rtspUrl, boolean rgb, boolean jpeg) {
+        this.cameraId = cameraId;
+        this.rtspUrl = rtspUrl;
+        csParserController = new CSParserController(cameraId, rtspUrl);
+        csParserController.setDataCallback(this);
+        csParserController.setEnableRgb(rgb);
+        csParserController.setEnableJpeg(jpeg);
+        csParserController.start();
+
+        executorService.submit(this);
+        executorService.submit(new RetrievalTask(rgbQueue));
+//        executorService.submit(new RetrievalTask(jpegQueue));
+    }
+
+    public CSParserController getCsParserController() {
+        return csParserController;
+    }
+
+    public List<ChannelHandlerContext> getTcpChannelHandlerContexts() {
+        return tcpChannelHandlerContexts;
+    }
+
+    @Override
+    public void onRgbData(long cameraId, byte[] buf, int bufSize, int width, int height) {
+        rgbQueue.add(buf);
+    }
+
+    @Override
+    public void onJpegData(long cameraId, byte[] buf, int bufSize, int width, int height) {
+        jpegQueue.add(buf);
+    }
+
+    @Override
+    public void run() {
+//        byte[] buffer = new byte[4*1024 * 1024];
+//        for(int i=0; i<1024 * 1024; i++) {
+//            buffer[i] = 1;
+//        }
+//        for(;;) {
+//            onRgbData(10000000L, buffer, buffer.length, 1920, 1080);
+//            try {
+//                Thread.sleep(10);
+//            } catch (InterruptedException e) {
+//                e.printStackTrace();
+//            }
+//        }
+    }
+
+    class RetrievalTask implements Runnable {
+
+        private CircularFifoQueue<byte[]> queue;
+
+        public RetrievalTask(CircularFifoQueue<byte[]> queue) {
+            this.queue = queue;
+        }
+
+        @Override
+        public void run() {
+            while(true) {
+                byte[] bytes = queue.poll();
+                if (bytes != null) {
+                    for (ChannelHandlerContext ctx : tcpChannelHandlerContexts) {
+                        ResponseData responseData = new ResponseData(bytes.length, bytes);
+                        ctx.writeAndFlush(responseData);
+                    }
+                }
+            }
+        }
+    }
+}

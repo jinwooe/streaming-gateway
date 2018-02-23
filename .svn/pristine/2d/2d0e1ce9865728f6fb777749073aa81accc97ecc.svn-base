@@ -1,0 +1,14 @@
+#spring.datasource.url=jdbc:mariadb://localhost:3306/springbootdb
+#spring.datasource.username=
+#spring.datasource.password=
+#spring.datasource.driver-class-name=org.mariadb.jdbc.Driver
+
+spring.jpa.database=h2
+
+zookeeper.connectString=127.0.0.1:2181
+zookeeper.znode.gateway=/gateway
+zookeeper.znode.camera=/camera
+
+serviceRouter.token.validation.url=http://localhost:8081/token/validate
+
+tcp.port=3000

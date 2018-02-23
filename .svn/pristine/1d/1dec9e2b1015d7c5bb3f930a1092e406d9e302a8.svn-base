@@ -1,0 +1,67 @@
+package com.skcc.rtspgw.stream;
+
+import com.skcc.rtspgw.entity.CameraInfo;
+import com.skcc.rtspgw.repository.CameraInfoRepository;
+import com.skcc.rtspgw.rtsp.CSParserController;
+import io.netty.channel.ChannelHandlerContext;
+import org.springframework.stereotype.Component;
+
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
+
+@Component
+public class StreamManagerActivator {
+
+    private CameraInfoRepository cameraInfoRepository;
+
+    public StreamManagerActivator(CameraInfoRepository cameraInfoRepository) {
+        this.cameraInfoRepository = cameraInfoRepository;
+    }
+
+    private Map<Long, StreamManager> streamManagerMap = new ConcurrentHashMap<>();
+
+    public StreamManager activateStreamManagerForRgb(long cameraId, ChannelHandlerContext channelHandlerContext) {
+        if(streamManagerMap.containsKey(cameraId)) {
+            StreamManager streamManager = streamManagerMap.get(cameraId);
+            CSParserController csParserController = streamManager.getCsParserController();
+            if(!csParserController.isEnabledRgb()) {
+                csParserController.setEnableRgb(true);
+            }
+
+            streamManager.getTcpChannelHandlerContexts().add(channelHandlerContext);
+
+            return streamManager;
+        }
+
+        String rtspUrl = findRtspUrl(cameraId);
+        StreamManager streamManager = new StreamManager(cameraId, rtspUrl, true, false);
+        streamManager.getTcpChannelHandlerContexts().add(channelHandlerContext);
+
+        streamManagerMap.put(cameraId, streamManager);
+        return streamManager;
+    }
+
+    public StreamManager activateStreamManagerForJpeg(long cameraId) {
+        if(streamManagerMap.containsKey(cameraId)) {
+            StreamManager streamManager = streamManagerMap.get(cameraId);
+            CSParserController csParserController = streamManager.getCsParserController();
+            if(!csParserController.isEnabledJpeg()) {
+                csParserController.setEnableJpeg(true);
+            }
+
+            return streamManager;
+        }
+
+        String rtspUrl = findRtspUrl(cameraId);
+        StreamManager streamManager = new StreamManager(cameraId, rtspUrl, false, true);
+        streamManagerMap.put(cameraId, streamManager);
+
+        return streamManager;
+    }
+
+    private String findRtspUrl(long cameraId) {
+        CameraInfo cameraInfo = cameraInfoRepository.findOne(cameraId);
+        return "rtsp://";
+//        return cameraInfo.getRtspUrl();
+    }
+}
