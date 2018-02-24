@@ -9,7 +9,6 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Service;
 
-@Profile("prod")
 @Service
 public class ZookeeperService {
     private static Logger logger = LoggerFactory.getLogger(ZookeeperService.class);

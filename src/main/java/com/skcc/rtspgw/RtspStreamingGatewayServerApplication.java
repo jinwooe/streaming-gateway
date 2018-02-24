@@ -28,7 +28,6 @@ public class RtspStreamingGatewayServerApplication {
 	 * while bootstrapping, register the server information of itself to zookeeper
 	 */
 	@Bean(destroyMethod = "close")
-	@Profile("prod")
 	public CuratorFramework curatorFramework(Environment env) {
 		CuratorFramework curatorFramework = CuratorFrameworkFactory.newClient(env.getProperty("zookeeper.connectString"),
 				new RetryNTimes(5, 1000));
